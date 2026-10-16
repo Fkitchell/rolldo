@@ -99,8 +99,15 @@ body {
   gap: 10px;
 }
 
+.task-form-row-schedule {
+  display: grid;
+  grid-template-columns: 1fr 2.3fr;
+  gap: 10px;
+}
+
 .task-form input[type="text"],
 .task-form input[type="number"],
+.task-form input[type="date"],
 .task-form select,
 .task-form textarea {
   width: 100%;
@@ -328,6 +335,23 @@ body {
 .badge-recurring {
   background: var(--accent);
   text-transform: none;
+}
+/* Outlined so due dates don't read as another priority badge. */
+.badge-due {
+  background: transparent;
+  border: 1px solid currentColor;
+  text-transform: none;
+  padding: 1px 7px;
+}
+.badge-due-overdue {
+  color: var(--high);
+  font-weight: 600;
+}
+.badge-due-soon {
+  color: #b7861f;
+}
+.badge-due-later {
+  color: var(--text-muted);
 }
 
 .tag-pill {

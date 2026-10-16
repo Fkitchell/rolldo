@@ -49,6 +49,26 @@ function sanitizeRecurrence(raw) {
   return { frequency: raw.frequency, interval: Math.round(interval) };
 }
 
+const DUE_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseDueDate(value) {
+  if (typeof value !== "string" || !DUE_DATE_PATTERN.test(value)) return null;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return date;
+}
+
+function formatDueDate(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function sanitizeDueDate(raw) {
+  const date = parseDueDate(raw);
+  return date ? formatDueDate(date) : null;
+}
+
 function addMonthsClamped(date, months) {
   const result = new Date(date);
   const day = result.getDate();
@@ -116,7 +136,13 @@ function sanitizeTaskInput(body, existing = {}) {
     nextDueAt = null;
   }
 
-  return { title, priority, tags, notes, estimatedMinutes, recurrence, completed, nextDueAt };
+  let dueDate = body.dueDate !== undefined ? sanitizeDueDate(body.dueDate) : existing.dueDate ?? null;
+  if (recurrence && dueDate && completed && !wasCompleted) {
+    // Roll the deadline forward one cycle so the reactivated task has a fresh due date.
+    dueDate = formatDueDate(computeNextDueDate(parseDueDate(dueDate), recurrence));
+  }
+
+  return { title, priority, tags, notes, estimatedMinutes, recurrence, completed, nextDueAt, dueDate };
 }
 
 const app = express();
