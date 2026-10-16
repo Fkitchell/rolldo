@@ -64,9 +64,10 @@ function sanitizeDueDate(raw) {
   return date ? formatDueDate(date) : null;
 }
 
-function addMonthsClamped(date, months) {
+// `day` lets callers aim for a day-of-month the source date was clamped away from
+// (e.g. back to the 31st after a stop on Feb 28).
+function addMonthsClamped(date, months, day = date.getDate()) {
   const result = new Date(date);
-  const day = result.getDate();
   result.setDate(1);
   result.setMonth(result.getMonth() + months);
   const daysInTargetMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
@@ -74,7 +75,7 @@ function addMonthsClamped(date, months) {
   return result;
 }
 
-function computeNextDueDate(fromDate, recurrence) {
+function computeNextDueDate(fromDate, recurrence, anchorDay) {
   const { frequency, interval } = recurrence;
   if (frequency === "daily") {
     const d = new Date(fromDate);
@@ -86,7 +87,7 @@ function computeNextDueDate(fromDate, recurrence) {
     d.setDate(d.getDate() + interval * 7);
     return d;
   }
-  return addMonthsClamped(fromDate, interval);
+  return addMonthsClamped(fromDate, interval, anchorDay);
 }
 
 function reactivateDueTasks(tasks) {
@@ -140,6 +141,11 @@ function sanitizeTaskInput(body, existing = {}) {
   let previousDueDate = existing.previousDueDate ?? null;
   if (!recurrence || dueDateEdited) previousDueDate = null;
 
+  // The day-of-month the user picked, so monthly tasks return to the 31st after a short month.
+  let dueAnchorDay = existing.dueAnchorDay ?? null;
+  if (!dueDate) dueAnchorDay = null;
+  else if (dueDateEdited || dueAnchorDay == null) dueAnchorDay = parseDueDate(dueDate).getDate();
+
   if (recurrence && dueDate && completed && !wasCompleted) {
     // Roll the deadline forward until it lands on or after the day the task reactivates,
     // so a task finished late doesn't come back already overdue.
@@ -148,7 +154,7 @@ function sanitizeTaskInput(body, existing = {}) {
     reactivatesOn.setHours(0, 0, 0, 0);
     let next = parseDueDate(dueDate);
     do {
-      next = computeNextDueDate(next, recurrence);
+      next = computeNextDueDate(next, recurrence, dueAnchorDay);
     } while (next < reactivatesOn);
     dueDate = formatDueDate(next);
   } else if (!completed && wasCompleted) {
@@ -167,6 +173,7 @@ function sanitizeTaskInput(body, existing = {}) {
     nextDueAt,
     dueDate,
     previousDueDate,
+    dueAnchorDay,
   };
 }
 
