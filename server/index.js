@@ -101,6 +101,7 @@ function reactivateDueTasks(tasks) {
     if (task.completed && task.recurrence && task.nextDueAt && new Date(task.nextDueAt) <= now) {
       task.completed = false;
       task.nextDueAt = null;
+      task.previousDueDate = null;
       changed = true;
     }
   }
@@ -136,13 +137,42 @@ function sanitizeTaskInput(body, existing = {}) {
     nextDueAt = null;
   }
 
-  let dueDate = body.dueDate !== undefined ? sanitizeDueDate(body.dueDate) : existing.dueDate ?? null;
+  const existingDueDate = existing.dueDate ?? null;
+  let dueDate = body.dueDate !== undefined ? sanitizeDueDate(body.dueDate) : existingDueDate;
+  const dueDateEdited = dueDate !== existingDueDate;
+
+  // The due date from before the last completion, so unchecking can put it back exactly.
+  let previousDueDate = existing.previousDueDate ?? null;
+  if (!recurrence || dueDateEdited) previousDueDate = null;
+
   if (recurrence && dueDate && completed && !wasCompleted) {
-    // Roll the deadline forward one cycle so the reactivated task has a fresh due date.
-    dueDate = formatDueDate(computeNextDueDate(parseDueDate(dueDate), recurrence));
+    // Roll the deadline forward until it lands on or after the day the task reactivates,
+    // so a task finished late doesn't come back already overdue.
+    previousDueDate = dueDate;
+    const reactivatesOn = new Date(nextDueAt);
+    reactivatesOn.setHours(0, 0, 0, 0);
+    let next = parseDueDate(dueDate);
+    do {
+      next = computeNextDueDate(next, recurrence);
+    } while (next < reactivatesOn);
+    dueDate = formatDueDate(next);
+  } else if (!completed && wasCompleted) {
+    if (previousDueDate) dueDate = previousDueDate;
+    previousDueDate = null;
   }
 
-  return { title, priority, tags, notes, estimatedMinutes, recurrence, completed, nextDueAt, dueDate };
+  return {
+    title,
+    priority,
+    tags,
+    notes,
+    estimatedMinutes,
+    recurrence,
+    completed,
+    nextDueAt,
+    dueDate,
+    previousDueDate,
+  };
 }
 
 const app = express();
