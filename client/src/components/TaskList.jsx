@@ -1,6 +1,7 @@
 import { useState } from "react";
 import TaskForm from "./TaskForm.jsx";
 import TaskItem from "./TaskItem.jsx";
+import { compareDueDates } from "../dueDates.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
@@ -9,7 +10,7 @@ export default function TaskList({ tasks, onCreate, onUpdate, onDelete }) {
 
   const active = tasks
     .filter((t) => !t.completed)
-    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    .sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || compareDueDates(a, b));
   const completed = tasks.filter((t) => t.completed);
 
   return (

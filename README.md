@@ -1,8 +1,9 @@
 # Rolldo 🎲
 
 A personal to-do list with a randomizer: keep a task list with priority, tags,
-notes, estimated time, and recurrence, then let Rolldo pick one for you when
-you can't decide what to work on next.
+notes, estimated time, due dates, and recurrence, then let Rolldo pick one for
+you when you can't decide what to work on next. Picks are weighted toward
+higher-priority tasks and tasks whose due date is close or past.
 
 **Live demo:** https://fkitchell.github.io/rolldo/ — the hosted version stores
 tasks in your browser's `localStorage`, so your list is private to your

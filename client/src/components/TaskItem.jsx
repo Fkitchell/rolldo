@@ -1,5 +1,6 @@
 import { useState } from "react";
 import TaskForm from "./TaskForm.jsx";
+import { formatDue } from "../dueDates.js";
 
 function formatMinutes(minutes) {
   if (!minutes) return null;
@@ -42,6 +43,7 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
   const timeLabel = formatMinutes(task.estimatedMinutes);
   const recurrenceLabel = formatRecurrence(task.recurrence);
   const nextDueLabel = formatNextDue(task.nextDueAt);
+  const due = task.completed ? null : formatDue(task.dueDate);
 
   return (
     <li className={`task-item priority-${task.priority} ${task.completed ? "completed" : ""}`}>
@@ -55,6 +57,7 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
         <div className="task-item-title-row">
           <span className={`badge badge-${task.priority}`}>{task.priority}</span>
           <span className="task-item-title">{task.title}</span>
+          {due && <span className={`badge badge-due badge-due-${due.tone}`}>{due.label}</span>}
           {timeLabel && <span className="badge badge-time">~{timeLabel}</span>}
           {recurrenceLabel && <span className="badge badge-recurring">🔁 {recurrenceLabel}</span>}
         </div>

@@ -9,6 +9,7 @@ const emptyForm = {
   estimatedUnit: "minutes",
   recurrenceFrequency: "none",
   recurrenceInterval: "1",
+  dueDate: "",
 };
 
 function toMinutes(value, unit) {
@@ -33,6 +34,7 @@ export default function TaskForm({ onSubmit, initial, onCancel }) {
       estimatedUnit: usingHours ? "hours" : "minutes",
       recurrenceFrequency: initial.recurrence?.frequency || "none",
       recurrenceInterval: String(initial.recurrence?.interval || 1),
+      dueDate: initial.dueDate || "",
     };
   });
 
@@ -65,6 +67,7 @@ export default function TaskForm({ onSubmit, initial, onCancel }) {
       notes: form.notes.trim(),
       estimatedMinutes: toMinutes(form.estimatedValue, form.estimatedUnit),
       recurrence,
+      dueDate: form.dueDate || null,
     });
 
     if (!initial) setForm(emptyForm);
@@ -121,7 +124,12 @@ export default function TaskForm({ onSubmit, initial, onCancel }) {
         </label>
       </div>
 
-      <div className="task-form-row">
+      <div className="task-form-row task-form-row-schedule">
+        <label className="field">
+          <span>Due</span>
+          <input type="date" value={form.dueDate} onChange={(e) => update("dueDate", e.target.value)} />
+        </label>
+
         <label className="field">
           <span>Repeats</span>
           <div className="field-inline field-inline-recurrence">
