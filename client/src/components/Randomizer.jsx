@@ -2,6 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const PRIORITIES = ["high", "medium", "low"];
 
+// Relative odds of a task being picked — a high task is 1.5x as likely as a low one.
+const PRIORITY_WEIGHTS = { high: 1.5, medium: 1.25, low: 1 };
+
+function weightedPick(pool) {
+  const weightOf = (t) => PRIORITY_WEIGHTS[t.priority] ?? PRIORITY_WEIGHTS.medium;
+  const total = pool.reduce((sum, t) => sum + weightOf(t), 0);
+  let r = Math.random() * total;
+  for (const t of pool) {
+    r -= weightOf(t);
+    if (r < 0) return t;
+  }
+  return pool[pool.length - 1];
+}
+
 // Delay (ms) before each successive flicker step during the spin — increasing values
 // create the slot-machine deceleration feel.
 const SPIN_DELAYS = [70, 70, 80, 90, 100, 120, 140, 170, 200, 240, 290, 350, 420];
@@ -109,7 +123,7 @@ export default function Randomizer({ tasks, onUpdate }) {
     setEmptyNotice(false);
     setPickedId(null);
 
-    const final = pool[Math.floor(Math.random() * pool.length)];
+    const final = weightedPick(pool);
     const sequence = [];
     for (let i = 0; i <= SPIN_DELAYS.length; i++) {
       sequence.push(i === SPIN_DELAYS.length ? final : pool[Math.floor(Math.random() * pool.length)]);
