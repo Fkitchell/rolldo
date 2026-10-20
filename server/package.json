@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node index.js"
+    "dev": "node index.js",
+    "tasks": "node cli.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
