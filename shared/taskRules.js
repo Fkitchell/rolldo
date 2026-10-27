@@ -1,20 +1,5 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// ROLLDO_DATA_FILE lets the CLI be pointed at a scratch copy for testing.
-const DATA_FILE = process.env.ROLLDO_DATA_FILE || path.join(__dirname, "tasks.json");
-
-export function readTasks() {
-  if (!fs.existsSync(DATA_FILE)) return [];
-  const raw = fs.readFileSync(DATA_FILE, "utf-8").trim();
-  return raw ? JSON.parse(raw) : [];
-}
-
-export function writeTasks(tasks) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(tasks, null, 2));
-}
+// Task validation, due-date and recurrence rules. Pure ESM with no fs or DOM access,
+// shared by the Express API, CLI, MCP server and the browser-only GitHub Pages build.
 
 export const VALID_PRIORITIES = new Set(["high", "medium", "low"]);
 export const VALID_FREQUENCIES = new Set(["daily", "weekly", "monthly"]);
@@ -107,7 +92,7 @@ export function reactivateDueTasks(tasks) {
 }
 
 export function sanitizeTaskInput(body, existing = {}) {
-  const title = typeof body.title === "string" ? body.title.trim() : existing.title;
+  const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
   const priority = VALID_PRIORITIES.has(body.priority) ? body.priority : existing.priority || "medium";
   const tags = Array.isArray(body.tags) ? normalizeTags(body.tags) : existing.tags || [];
   const notes = typeof body.notes === "string" ? body.notes : existing.notes ?? "";

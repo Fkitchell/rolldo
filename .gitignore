@@ -2,3 +2,4 @@ node_modules/
 client/dist/
 server/tasks.json
 .env
+server/tasks.json.tmp
