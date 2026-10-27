@@ -9,11 +9,20 @@ const DATA_FILE = process.env.ROLLDO_DATA_FILE || path.join(__dirname, "tasks.js
 export function readTasks() {
   if (!fs.existsSync(DATA_FILE)) return [];
   const raw = fs.readFileSync(DATA_FILE, "utf-8").trim();
-  return raw ? JSON.parse(raw) : [];
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    // Don't fall back to [] — the next write would wipe the file.
+    throw new Error(`${DATA_FILE} is not valid JSON (${err.message}); fix or restore it before continuing`);
+  }
 }
 
+// Write to a temp file and rename it over the original, so a crash mid-write can't leave a half-written file.
 export function writeTasks(tasks) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(tasks, null, 2));
+  const tmp = `${DATA_FILE}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(tasks, null, 2));
+  fs.renameSync(tmp, DATA_FILE);
 }
 
 export const VALID_PRIORITIES = new Set(["high", "medium", "low"]);
@@ -107,7 +116,7 @@ export function reactivateDueTasks(tasks) {
 }
 
 export function sanitizeTaskInput(body, existing = {}) {
-  const title = typeof body.title === "string" ? body.title.trim() : existing.title;
+  const title = typeof body.title === "string" && body.title.trim() ? body.title.trim() : existing.title;
   const priority = VALID_PRIORITIES.has(body.priority) ? body.priority : existing.priority || "medium";
   const tags = Array.isArray(body.tags) ? normalizeTags(body.tags) : existing.tags || [];
   const notes = typeof body.notes === "string" ? body.notes : existing.notes ?? "";
