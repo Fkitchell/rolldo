@@ -1,33 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { formatDue, urgencyMultiplier } from "../dueDates.js";
+import { formatDue } from "../../../shared/dueDates.js";
+import { formatMinutes } from "../../../shared/format.js";
+import { weightedPick } from "../../../shared/pick.js";
 
 const PRIORITIES = ["high", "medium", "low"];
-
-// Relative odds of a task being picked — a high task is 1.5x as likely as a low one.
-// A looming due date multiplies these further (see urgencyMultiplier).
-const PRIORITY_WEIGHTS = { high: 1.5, medium: 1.25, low: 1 };
-
-function weightedPick(pool) {
-  const weightOf = (t) => (PRIORITY_WEIGHTS[t.priority] ?? PRIORITY_WEIGHTS.medium) * urgencyMultiplier(t);
-  const total = pool.reduce((sum, t) => sum + weightOf(t), 0);
-  let r = Math.random() * total;
-  for (const t of pool) {
-    r -= weightOf(t);
-    if (r < 0) return t;
-  }
-  return pool[pool.length - 1];
-}
 
 // Delay (ms) before each successive flicker step during the spin — increasing values
 // create the slot-machine deceleration feel.
 const SPIN_DELAYS = [70, 70, 80, 90, 100, 120, 140, 170, 200, 240, 290, 350, 420];
-
-function formatMinutes(minutes) {
-  if (!minutes) return null;
-  if (minutes % 60 === 0 && minutes >= 60) return `${minutes / 60}h`;
-  if (minutes > 60) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-  return `${minutes}m`;
-}
 
 function minutesUntil(hhmm) {
   if (!hhmm) return null;

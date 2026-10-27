@@ -1,11 +1,10 @@
 // Task-list operations shared by the CLI (cli.js) and the MCP server (mcp.js).
 // Each one loads tasks.json, reactivates due recurring tasks like GET /api/tasks does, and saves any changes.
 import crypto from "crypto";
-import { readTasks, writeTasks, reactivateDueTasks, sanitizeTaskInput } from "./taskLogic.js";
-import { compareDueDates, daysUntilDue, formatDue, urgencyMultiplier } from "../client/src/dueDates.js";
-
-// Mirrors PRIORITY_WEIGHTS in client/src/components/Randomizer.jsx — keep the two in sync.
-const PRIORITY_WEIGHTS = { high: 1.5, medium: 1.25, low: 1 };
+import { readTasks, writeTasks } from "./taskStore.js";
+import { VALID_FREQUENCIES, VALID_PRIORITIES, reactivateDueTasks, sanitizeTaskInput } from "../shared/taskRules.js";
+import { compareDueDates, daysUntilDue, formatDue } from "../shared/dueDates.js";
+import { weightedPick } from "../shared/pick.js";
 
 export class TaskError extends Error {}
 
@@ -16,7 +15,7 @@ function fail(message) {
 function parseRepeat(value) {
   if (value === "none") return null;
   const [frequency, interval = "1"] = value.split(":");
-  if (!["daily", "weekly", "monthly"].includes(frequency)) fail(`invalid repeat "${value}"`);
+  if (!VALID_FREQUENCIES.has(frequency)) fail(`invalid repeat "${value}"`);
   const n = Number(interval);
   if (!Number.isInteger(n) || n < 1) fail(`invalid repeat interval "${interval}"`);
   return { frequency, interval: n };
@@ -31,7 +30,7 @@ function toBody(fields) {
     body.title = String(fields.title);
   }
   if (fields.priority !== undefined) {
-    if (!["high", "medium", "low"].includes(fields.priority)) fail(`invalid priority "${fields.priority}"`);
+    if (!VALID_PRIORITIES.has(fields.priority)) fail(`invalid priority "${fields.priority}"`);
     body.priority = fields.priority;
   }
   if (fields.tags !== undefined) {
@@ -83,17 +82,6 @@ function findIndex(tasks, id) {
   if (matches.length === 0) fail(`task not found: ${id}`);
   if (matches.length > 1) fail(`id prefix "${id}" matches ${matches.length} tasks; use more characters`);
   return matches[0][1];
-}
-
-function weightedPick(pool) {
-  const weightOf = (t) => (PRIORITY_WEIGHTS[t.priority] ?? PRIORITY_WEIGHTS.medium) * urgencyMultiplier(t);
-  const total = pool.reduce((sum, t) => sum + weightOf(t), 0);
-  let r = Math.random() * total;
-  for (const t of pool) {
-    r -= weightOf(t);
-    if (r < 0) return t;
-  }
-  return pool[pool.length - 1];
 }
 
 // Runs `fn` against the loaded task list and saves it if anything changed.

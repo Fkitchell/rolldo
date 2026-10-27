@@ -1,11 +1,6 @@
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import { parseDueDate } from "./taskRules.js";
 
-function parseDueDate(dueDate) {
-  if (!dueDate) return null;
-  const [y, m, d] = dueDate.split("-").map(Number);
-  if ([y, m, d].some(Number.isNaN)) return null;
-  return new Date(y, m - 1, d);
-}
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 // Whole calendar days from today until the due date — negative when overdue, null with no date.
 export function daysUntilDue(dueDate) {

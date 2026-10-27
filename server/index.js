@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "crypto";
-import { readTasks, writeTasks, reactivateDueTasks, sanitizeTaskInput } from "./taskLogic.js";
+import { readTasks, writeTasks } from "./taskStore.js";
+import { reactivateDueTasks, sanitizeTaskInput } from "../shared/taskRules.js";
 
 const PORT = 3001;
 

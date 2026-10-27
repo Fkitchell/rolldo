@@ -1,7 +1,7 @@
 import { useState } from "react";
 import TaskForm from "./TaskForm.jsx";
 import TaskItem from "./TaskItem.jsx";
-import { compareDueDates } from "../dueDates.js";
+import { compareDueDates } from "../../../shared/dueDates.js";
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 
