@@ -18,7 +18,7 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
           initial={task}
           onCancel={() => setEditing(false)}
           onSubmit={(updates) => {
-            onUpdate(task.id, updates);
+            if (Object.keys(updates).length > 0) onUpdate(task.id, updates);
             setEditing(false);
           }}
         />

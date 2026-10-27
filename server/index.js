@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { readTasks, writeTasks } from "./taskStore.js";
 import { reactivateDueTasks, sanitizeTaskInput } from "../shared/taskRules.js";
 
-const PORT = 3001;
+const PORT = Number(process.env.ROLLDO_PORT) || 3001;
 
 const app = express();
 app.use(express.json());
