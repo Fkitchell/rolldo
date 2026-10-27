@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDue } from "../../../shared/dueDates.js";
 import { formatMinutes } from "../../../shared/format.js";
 import { weightedPick } from "../../../shared/pick.js";
+import TaskForm from "./TaskForm.jsx";
 
 const PRIORITIES = ["high", "medium", "low"];
 
@@ -34,6 +35,7 @@ export default function Randomizer({ tasks, onUpdate }) {
   const [spinDisplay, setSpinDisplay] = useState(null);
   const [spinTick, setSpinTick] = useState(0);
   const [justLanded, setJustLanded] = useState(false);
+  const [editing, setEditing] = useState(false);
   const spinTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export default function Randomizer({ tasks, onUpdate }) {
 
   function pickFrom(pool) {
     if (spinning) return;
+    setEditing(false);
 
     if (pool.length === 0) {
       setPickedId(null);
@@ -147,11 +150,13 @@ export default function Randomizer({ tasks, onUpdate }) {
     if (!picked || spinning) return;
     onUpdate(picked.id, { completed: true });
     setPickedId(null);
+    setEditing(false);
   }
 
   function handleNotNow() {
     if (spinning) return;
     setPickedId(null);
+    setEditing(false);
   }
 
   const deadlineInvalid = timeMode === "deadline" && deadline && availableMinutes == null;
@@ -258,7 +263,20 @@ export default function Randomizer({ tasks, onUpdate }) {
         </div>
       )}
 
-      {!spinning && picked && (
+      {!spinning && picked && editing && (
+        <div className={`result-card priority-${picked.priority}`}>
+          <TaskForm
+            initial={picked}
+            onCancel={() => setEditing(false)}
+            onSubmit={(updates) => {
+              onUpdate(picked.id, updates);
+              setEditing(false);
+            }}
+          />
+        </div>
+      )}
+
+      {!spinning && picked && !editing && (
         <div
           className={`result-card priority-${picked.priority} ${justLanded ? "landed" : ""}`}
           onAnimationEnd={() => setJustLanded(false)}
@@ -288,6 +306,9 @@ export default function Randomizer({ tasks, onUpdate }) {
             </button>
             <button className="btn btn-secondary" onClick={handleReroll}>
               🎲 Reroll
+            </button>
+            <button className="btn btn-secondary" onClick={() => setEditing(true)}>
+              ✎ Edit
             </button>
             <button className="btn btn-ghost" onClick={handleNotNow}>
               Not now
