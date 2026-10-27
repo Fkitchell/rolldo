@@ -1,12 +1,11 @@
 import express from "express";
-import cors from "cors";
 import crypto from "crypto";
-import { readTasks, writeTasks, reactivateDueTasks, sanitizeTaskInput } from "./taskLogic.js";
+import { readTasks, writeTasks } from "./taskStore.js";
+import { reactivateDueTasks, sanitizeTaskInput } from "../shared/taskRules.js";
 
-const PORT = 3001;
+const PORT = Number(process.env.ROLLDO_PORT) || 3001;
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 app.get("/api/tasks", (req, res) => {
@@ -52,6 +51,7 @@ app.delete("/api/tasks/:id", (req, res) => {
   res.json(removed);
 });
 
-app.listen(PORT, () => {
+// Localhost only: the API has no auth, and the Vite dev server proxies /api to it.
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`Rolldo server listening on http://localhost:${PORT}`);
 });
