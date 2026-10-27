@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
     // Let the dev server serve ../shared (rules shared with the Express API).
     fs: { allow: [".."] },
     proxy: {
-      "/api": "http://localhost:3001",
+      "/api": `http://localhost:${process.env.ROLLDO_PORT || 3001}`,
     },
   },
 }));

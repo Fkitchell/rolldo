@@ -10,25 +10,55 @@ export default function App() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    getTasks()
-      .then(setTasks)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    // The CLI and MCP server write tasks.json too, so refetch whenever the tab regains focus.
+    const refresh = () =>
+      getTasks()
+        .then(setTasks)
+        .catch((e) => setError(e.message))
+        .finally(() => setLoading(false));
+    const onVisible = () => document.visibilityState === "visible" && refresh();
+
+    refresh();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
-  async function handleCreate(fields) {
-    const task = await createTask(fields);
-    setTasks((prev) => [...prev, task]);
+  // Runs a change, showing any failure in the error banner. Resolves to false if it failed.
+  async function attempt(action) {
+    try {
+      await action();
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+      return false;
+    }
   }
 
-  async function handleUpdate(id, updates) {
-    const updated = await updateTask(id, updates);
-    setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+  function handleCreate(fields) {
+    return attempt(async () => {
+      const task = await createTask(fields);
+      setTasks((prev) => [...prev, task]);
+    });
   }
 
-  async function handleDelete(id) {
-    await deleteTask(id);
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  function handleUpdate(id, updates) {
+    return attempt(async () => {
+      const updated = await updateTask(id, updates);
+      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    });
+  }
+
+  function handleDelete(id) {
+    const task = tasks.find((t) => t.id === id);
+    if (!confirm(`Delete "${task?.title}"?`)) return;
+    return attempt(async () => {
+      await deleteTask(id);
+      setTasks((prev) => prev.filter((t) => t.id !== id));
+    });
   }
 
   return (

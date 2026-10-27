@@ -19,58 +19,72 @@ function toMinutes(value, unit) {
   return unit === "hours" ? Math.round(n * 60) : Math.round(n);
 }
 
+function toForm(task) {
+  const usingHours = task.estimatedMinutes && task.estimatedMinutes % 60 === 0 && task.estimatedMinutes >= 60;
+  return {
+    title: task.title || "",
+    priority: task.priority || "medium",
+    tagsText: (task.tags || []).join(", "),
+    notes: task.notes || "",
+    estimatedValue: task.estimatedMinutes
+      ? String(usingHours ? task.estimatedMinutes / 60 : task.estimatedMinutes)
+      : "",
+    estimatedUnit: usingHours ? "hours" : "minutes",
+    recurrenceFrequency: task.recurrence?.frequency || "none",
+    recurrenceInterval: String(task.recurrence?.interval || 1),
+    dueDate: task.dueDate || "",
+  };
+}
+
+function toFields(form) {
+  const recurrence =
+    form.recurrenceFrequency === "none"
+      ? null
+      : {
+          frequency: form.recurrenceFrequency,
+          interval: Math.max(1, Math.round(Number(form.recurrenceInterval)) || 1),
+        };
+
+  return {
+    title: form.title.trim(),
+    priority: form.priority,
+    tags: form.tagsText
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+    notes: form.notes.trim(),
+    estimatedMinutes: toMinutes(form.estimatedValue, form.estimatedUnit),
+    recurrence,
+    dueDate: form.dueDate || null,
+  };
+}
+
 export default function TaskForm({ onSubmit, initial, onCancel }) {
-  const [form, setForm] = useState(() => {
-    if (!initial) return emptyForm;
-    const usingHours = initial.estimatedMinutes && initial.estimatedMinutes % 60 === 0 && initial.estimatedMinutes >= 60;
-    return {
-      title: initial.title || "",
-      priority: initial.priority || "medium",
-      tagsText: (initial.tags || []).join(", "),
-      notes: initial.notes || "",
-      estimatedValue: initial.estimatedMinutes
-        ? String(usingHours ? initial.estimatedMinutes / 60 : initial.estimatedMinutes)
-        : "",
-      estimatedUnit: usingHours ? "hours" : "minutes",
-      recurrenceFrequency: initial.recurrence?.frequency || "none",
-      recurrenceInterval: String(initial.recurrence?.interval || 1),
-      dueDate: initial.dueDate || "",
-    };
-  });
+  // Snapshot the task as it was when editing began; a refetch may change `initial` mid-edit.
+  const [original] = useState(initial);
+  const [form, setForm] = useState(() => (initial ? toForm(initial) : emptyForm));
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const title = form.title.trim();
-    if (!title) return;
+    const fields = toFields(form);
+    if (!fields.title) return;
 
-    const tags = form.tagsText
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    if (!original) {
+      // Keep the input if the create failed, so it can be retried.
+      if ((await onSubmit(fields)) !== false) setForm(emptyForm);
+      return;
+    }
 
-    const recurrence =
-      form.recurrenceFrequency === "none"
-        ? null
-        : {
-            frequency: form.recurrenceFrequency,
-            interval: Math.max(1, Math.round(Number(form.recurrenceInterval)) || 1),
-          };
-
-    onSubmit({
-      title,
-      priority: form.priority,
-      tags,
-      notes: form.notes.trim(),
-      estimatedMinutes: toMinutes(form.estimatedValue, form.estimatedUnit),
-      recurrence,
-      dueDate: form.dueDate || null,
-    });
-
-    if (!initial) setForm(emptyForm);
+    // Send only the fields the user changed, so saving doesn't overwrite
+    // edits the CLI or MCP server made to fields this form merely loaded.
+    const before = toFields(toForm(original));
+    onSubmit(
+      Object.fromEntries(Object.entries(fields).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(before[k])))
+    );
   }
 
   return (
