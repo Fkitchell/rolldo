@@ -1,4 +1,4 @@
-import { reactivateDueTasks, sanitizeTaskInput } from "../../../shared/taskRules.js";
+import { reactivateDueTasks, releaseBlockedBy, sanitizeTaskInput } from "../../../shared/taskRules.js";
 
 const STORAGE_KEY = "rolldo:tasks";
 
@@ -43,8 +43,10 @@ export function updateTask(id, updates) {
   const idx = tasks.findIndex((t) => t.id === id);
   if (idx === -1) return Promise.reject(new Error("task not found"));
 
+  const wasCompleted = tasks[idx].completed;
   const fields = sanitizeTaskInput(updates, tasks[idx]);
   tasks[idx] = { ...tasks[idx], ...fields };
+  if (tasks[idx].completed && !wasCompleted) releaseBlockedBy(tasks, tasks[idx].id);
   writeTasks(tasks);
   return Promise.resolve(tasks[idx]);
 }

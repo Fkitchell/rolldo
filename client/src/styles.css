@@ -572,3 +572,14 @@ body {
     transform: scale(1);
   }
 }
+
+/* Blocked or not started yet: the randomizer skips these. */
+.task-item-not-ready {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.task-form select[multiple] {
+  width: 100%;
+}

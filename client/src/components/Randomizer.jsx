@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatDue } from "../../../shared/dueDates.js";
 import { formatMinutes } from "../../../shared/format.js";
 import { weightedPick } from "../../../shared/pick.js";
+import { isReady } from "../../../shared/taskRules.js";
 import TaskForm from "./TaskForm.jsx";
 
 const PRIORITIES = ["high", "medium", "low"];
@@ -62,8 +63,10 @@ export default function Randomizer({ tasks, onUpdate }) {
   }, [timeMode, minutesHave, deadline]);
 
   const filtered = useMemo(() => {
+    const tasksById = new Map(tasks.map((t) => [t.id, t]));
     return tasks.filter((t) => {
       if (t.completed) return false;
+      if (!isReady(t, tasksById)) return false;
       if (!selectedPriorities.has(t.priority)) return false;
       if (selectedTags.size > 0) {
         const hasMatch = t.tags?.some((tag) => selectedTags.has(tag));
@@ -267,6 +270,7 @@ export default function Randomizer({ tasks, onUpdate }) {
         <div className={`result-card priority-${picked.priority}`}>
           <TaskForm
             initial={picked}
+            tasks={tasks}
             onCancel={() => setEditing(false)}
             onSubmit={(updates) => {
               onUpdate(picked.id, updates);

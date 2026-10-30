@@ -55,3 +55,29 @@ test("roll picks only from open tasks matching the filters", () => {
   for (let i = 0; i < 20; i++) assert.equal(rollTask({ maxMinutes: 30 }).id, a.id);
   assert.equal(rollTask({ tag: "work" }), null);
 });
+
+test("blocked and not-yet-started tasks stay out of ready lists and rolls until they're ready", () => {
+  const blocker = addTask({ title: "Get the quote", tags: ["deps"] });
+  const waiting = addTask({ title: "Sign the contract", tags: ["deps"], blocked_by: blocker.id.slice(0, 8) });
+  assert.deepEqual(waiting.blockedBy, [blocker.id]);
+  assert.deepEqual(waiting.waitingOn, ["Get the quote"]);
+  assert.equal(waiting.ready, false);
+  assert.throws(() => updateTask(waiting.id, { blocked_by: "nope" }), TaskError);
+  assert.throws(() => updateTask(waiting.id, { start: "soon" }), TaskError);
+
+  const later = addTask({ title: "Renew", tags: ["deps"], start: "2099-01-01" });
+  assert.match(later.startLabel, /^Starts /);
+
+  assert.deepEqual(listTasks({ tag: "deps", ready: true }).map((t) => t.id), [blocker.id]);
+  assert.equal(listTasks({ tag: "deps" }).length, 3);
+  for (let i = 0; i < 20; i++) assert.equal(rollTask({ tag: "deps" }).id, blocker.id);
+
+  setCompleted(blocker.id, true);
+  const [ready] = listTasks({ tag: "deps", ready: true });
+  assert.equal(ready.id, waiting.id);
+  assert.deepEqual(ready.blockedBy, [], "a finished blocker is removed so a repeat can't re-block");
+
+  assert.equal(updateTask(later.id, { start: "none" }).ready, true);
+  assert.equal(updateTask(waiting.id, { blocked_by: [later.id] }).ready, false);
+  assert.deepEqual(updateTask(waiting.id, { blocked_by: "none" }).blockedBy, []);
+});

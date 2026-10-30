@@ -16,7 +16,7 @@ import {
 const USAGE = `Usage: node cli.js <command> [options]
 
 Commands:
-  list [--all] [--tag T] [--priority P] [--due-within N]
+  list [--all] [--ready] [--tag T] [--priority P] [--due-within N]
   find <text> [--all]
   add --title T [task options]
   update <id> [--title T] [task options]
@@ -28,6 +28,9 @@ Commands:
 Task options:
   --priority high|medium|low   --tags a,b   --due YYYY-MM-DD|none
   --minutes N|none   --notes TEXT   --repeat daily|weekly|monthly[:interval]|none
+  --start YYYY-MM-DD|none   --blocked-by id1,id2|none
+
+--ready leaves out tasks that are blocked or haven't started; roll always does.
 
 <id> may be the full id or a unique prefix of it. Output is JSON.`;
 
@@ -43,18 +46,24 @@ const OPTIONS = {
   minutes: { type: "string" },
   notes: { type: "string" },
   repeat: { type: "string" },
+  start: { type: "string" },
+  "blocked-by": { type: "string" },
+  ready: { type: "boolean" },
   help: { type: "boolean", short: "h" },
 };
 
-const TASK_FIELDS = ["title", "priority", "tags", "due", "minutes", "notes", "repeat"];
+const TASK_FIELDS = ["title", "priority", "tags", "due", "minutes", "notes", "repeat", "start", "blocked-by"];
 
 function taskFields(values) {
-  return Object.fromEntries(TASK_FIELDS.filter((k) => values[k] !== undefined).map((k) => [k, values[k]]));
+  return Object.fromEntries(
+    TASK_FIELDS.filter((k) => values[k] !== undefined).map((k) => [k.replace("-", "_"), values[k]]),
+  );
 }
 
 function filters(values) {
   return {
     all: values.all,
+    ready: values.ready,
     tag: values.tag,
     priority: values.priority,
     dueWithin: values["due-within"],

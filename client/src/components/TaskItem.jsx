@@ -2,13 +2,19 @@ import { useState } from "react";
 import TaskForm from "./TaskForm.jsx";
 import { formatDue } from "../../../shared/dueDates.js";
 import { formatMinutes, formatRecurrence } from "../../../shared/format.js";
+import { formatDueDate, parseDueDate } from "../../../shared/taskRules.js";
 
 function formatNextDue(nextDueAt) {
   if (!nextDueAt) return null;
   return new Date(nextDueAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export default function TaskItem({ task, onUpdate, onDelete }) {
+function formatStart(startDate) {
+  if (!startDate || startDate <= formatDueDate(new Date())) return null;
+  return parseDueDate(startDate).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+export default function TaskItem({ task, tasks = [], onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -16,6 +22,7 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
       <li className="task-item task-item-editing">
         <TaskForm
           initial={task}
+          tasks={tasks}
           onCancel={() => setEditing(false)}
           onSubmit={(updates) => {
             if (Object.keys(updates).length > 0) onUpdate(task.id, updates);
@@ -30,6 +37,10 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
   const recurrenceLabel = formatRecurrence(task.recurrence);
   const nextDueLabel = formatNextDue(task.nextDueAt);
   const due = task.completed ? null : formatDue(task.dueDate);
+  const startLabel = task.completed ? null : formatStart(task.startDate);
+  const waitingOn = task.completed
+    ? []
+    : (task.blockedBy ?? []).map((id) => tasks.find((t) => t.id === id)).filter((t) => t && !t.completed);
 
   return (
     <li className={`task-item priority-${task.priority} ${task.completed ? "completed" : ""}`}>
@@ -47,6 +58,12 @@ export default function TaskItem({ task, onUpdate, onDelete }) {
           {timeLabel && <span className="badge badge-time">~{timeLabel}</span>}
           {recurrenceLabel && <span className="badge badge-recurring">🔁 {recurrenceLabel}</span>}
         </div>
+        {(waitingOn.length > 0 || startLabel) && (
+          <div className="task-item-meta task-item-not-ready">
+            {waitingOn.length > 0 && <span>⏳ Waiting on {waitingOn.map((t) => t.title).join(", ")}</span>}
+            {startLabel && <span>Starts {startLabel}</span>}
+          </div>
+        )}
         {(task.tags?.length > 0 || task.notes || nextDueLabel) && (
           <div className="task-item-meta">
             {task.tags?.map((tag) => (

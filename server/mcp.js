@@ -22,6 +22,7 @@ const INSTRUCTIONS = `Rolldo is the user's personal task list / to-do list.
 - Recurrence: "every week" -> weekly, "every 2 weeks" -> weekly:2, "quarterly" -> monthly:3.
 - Priority: "urgent"/"important"/"asap" -> high, "someday"/"whenever" -> low; otherwise leave it unset (medium).
 - Before changing a task the user named in words, call find_tasks to get its id. If several match, ask which one.
+- "after X is done"/"once X is finished" -> blocked_by with X's id; "not before Monday"/"starting next week" -> start. Tasks that aren't ready yet show \`waitingOn\` and \`startLabel\`.
 - Always confirm with the user before delete_task.
 - Reply with a short readable list (title, priority if not medium, dueLabel, repeat, tags), not raw JSON.`;
 
@@ -40,6 +41,12 @@ const TASK_PROPS = {
     type: "string",
     description: "daily, weekly or monthly, optionally with an interval (weekly:2 = every 2 weeks), or \"none\"",
   },
+  start: { type: "string", description: "Don't suggest the task before this day (YYYY-MM-DD), or \"none\" to clear it" },
+  blocked_by: {
+    type: ["array", "string"],
+    items: { type: "string" },
+    description: "Ids (or unique prefixes) of tasks that must be done first; replaces the list. \"none\" clears it",
+  },
 };
 
 const ID_PROP = { id: { type: "string", description: "Task id, or a unique prefix of it (8 characters is plenty)" } };
@@ -54,6 +61,7 @@ const TOOLS = [
         all: { type: "boolean", description: "Include completed tasks" },
         ...FILTER_PROPS,
         dueWithin: { type: "number", description: "Only tasks due within this many days (0 = today or overdue)" },
+        ready: { type: "boolean", description: "Leave out tasks that are waiting on another task or haven't started" },
       },
     },
     annotations: { readOnlyHint: true },
@@ -112,7 +120,7 @@ const TOOLS = [
   {
     name: "roll_task",
     description:
-      "Pick one open task at random, weighted by priority and due-date urgency (the app's randomizer). Returns null if nothing matches.",
+      "Pick one open, ready task at random, weighted by priority and due-date urgency (the app's randomizer). Skips tasks that are waiting on another task or haven't reached their start date. Returns null if nothing matches.",
     inputSchema: {
       type: "object",
       properties: {
