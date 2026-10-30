@@ -1,7 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import { readTasks, writeTasks } from "./taskStore.js";
-import { reactivateDueTasks, sanitizeTaskInput } from "../shared/taskRules.js";
+import { reactivateDueTasks, releaseBlockedBy, sanitizeTaskInput } from "../shared/taskRules.js";
 
 const PORT = Number(process.env.ROLLDO_PORT) || 3001;
 
@@ -35,8 +35,10 @@ app.put("/api/tasks/:id", (req, res) => {
   const idx = tasks.findIndex((t) => t.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "task not found" });
 
+  const wasCompleted = tasks[idx].completed;
   const fields = sanitizeTaskInput(req.body, tasks[idx]);
   tasks[idx] = { ...tasks[idx], ...fields };
+  if (tasks[idx].completed && !wasCompleted) releaseBlockedBy(tasks, tasks[idx].id);
   writeTasks(tasks);
   res.json(tasks[idx]);
 });

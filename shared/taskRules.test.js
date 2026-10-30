@@ -7,6 +7,8 @@ import {
   computeNextDueDate,
   reactivateDueTasks,
   sanitizeTaskInput,
+  isReady,
+  releaseBlockedBy,
 } from "./taskRules.js";
 
 // Freezes `new Date()` at a local-time moment so recurrence math is deterministic.
@@ -65,7 +67,19 @@ describe("sanitizeTaskInput", () => {
       dueDate: null,
       previousDueDate: null,
       dueAnchorDay: null,
+      blockedBy: [],
+      startDate: null,
     });
+  });
+
+  test("blockedBy drops blanks, duplicates and the task itself; startDate is validated", () => {
+    const existing = { id: "me", ...sanitizeTaskInput({ title: "t", blockedBy: ["a", " a ", "", "b"], startDate: "2026-11-02" }) };
+    assert.deepEqual(existing.blockedBy, ["a", "b"]);
+    assert.equal(existing.startDate, "2026-11-02");
+    assert.deepEqual(sanitizeTaskInput({ blockedBy: ["me", "c"] }, existing).blockedBy, ["c"]);
+    assert.deepEqual(sanitizeTaskInput({ blockedBy: "x" }, existing).blockedBy, ["a", "b"]);
+    assert.equal(sanitizeTaskInput({ startDate: "2026-02-30" }, existing).startDate, null);
+    assert.equal(sanitizeTaskInput({}, existing).startDate, "2026-11-02");
   });
 
   test("keeps existing values for blank title and invalid priority", () => {
@@ -147,6 +161,29 @@ describe("sanitizeTaskInput", () => {
       assert.ok(done.nextDueAt);
       assert.equal(sanitizeTaskInput({ recurrence: null }, done).nextDueAt, null);
     });
+  });
+});
+
+describe("isReady / releaseBlockedBy", () => {
+  const tasks = [
+    { id: "open", completed: false },
+    { id: "done", completed: true },
+  ];
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+
+  test("waits for a future start date and for open blockers only", () => {
+    assert.equal(isReady({}, byId, "2026-10-30"), true);
+    assert.equal(isReady({ startDate: "2026-10-31" }, byId, "2026-10-30"), false);
+    assert.equal(isReady({ startDate: "2026-10-30" }, byId, "2026-10-30"), true);
+    assert.equal(isReady({ blockedBy: ["open"] }, byId, "2026-10-30"), false);
+    assert.equal(isReady({ blockedBy: ["done", "deleted"] }, byId, "2026-10-30"), true);
+  });
+
+  test("releaseBlockedBy removes the finished task from every list", () => {
+    const list = [{ id: "a", blockedBy: ["x", "y"] }, { id: "b", blockedBy: ["y"] }, { id: "c" }];
+    assert.equal(releaseBlockedBy(list, "y"), true);
+    assert.deepEqual(list.map((t) => t.blockedBy), [["x"], [], undefined]);
+    assert.equal(releaseBlockedBy(list, "y"), false);
   });
 });
 

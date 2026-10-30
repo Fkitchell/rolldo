@@ -10,6 +10,8 @@ const emptyForm = {
   recurrenceFrequency: "none",
   recurrenceInterval: "1",
   dueDate: "",
+  startDate: "",
+  blockedBy: [],
 };
 
 function toMinutes(value, unit) {
@@ -33,6 +35,8 @@ function toForm(task) {
     recurrenceFrequency: task.recurrence?.frequency || "none",
     recurrenceInterval: String(task.recurrence?.interval || 1),
     dueDate: task.dueDate || "",
+    startDate: task.startDate || "",
+    blockedBy: task.blockedBy || [],
   };
 }
 
@@ -56,13 +60,20 @@ function toFields(form) {
     estimatedMinutes: toMinutes(form.estimatedValue, form.estimatedUnit),
     recurrence,
     dueDate: form.dueDate || null,
+    startDate: form.startDate || null,
+    blockedBy: form.blockedBy,
   };
 }
 
-export default function TaskForm({ onSubmit, initial, onCancel }) {
+export default function TaskForm({ onSubmit, initial, onCancel, tasks = [] }) {
   // Snapshot the task as it was when editing began; a refetch may change `initial` mid-edit.
   const [original] = useState(initial);
   const [form, setForm] = useState(() => (initial ? toForm(initial) : emptyForm));
+
+  // Open tasks this one can wait on, plus any it already waits on.
+  const blockerOptions = tasks.filter(
+    (t) => t.id !== initial?.id && (!t.completed || form.blockedBy.includes(t.id)),
+  );
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -178,6 +189,36 @@ export default function TaskForm({ onSubmit, initial, onCancel }) {
             )}
           </div>
         </label>
+      </div>
+
+      <div className="task-form-row task-form-row-schedule">
+        <label className="field">
+          <span>Not before</span>
+          <input type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} />
+        </label>
+
+        {blockerOptions.length > 0 && (
+          <label className="field">
+            <span>Waiting on (Ctrl+click for several)</span>
+            <select
+              multiple
+              size={Math.min(4, blockerOptions.length)}
+              value={form.blockedBy}
+              onChange={(e) =>
+                update(
+                  "blockedBy",
+                  Array.from(e.target.selectedOptions, (o) => o.value),
+                )
+              }
+            >
+              {blockerOptions.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className="task-form-row">

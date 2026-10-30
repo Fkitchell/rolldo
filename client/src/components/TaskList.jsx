@@ -15,14 +15,14 @@ export default function TaskList({ tasks, onCreate, onUpdate, onDelete }) {
 
   return (
     <div className="task-list-view">
-      <TaskForm onSubmit={onCreate} />
+      <TaskForm onSubmit={onCreate} tasks={tasks} />
 
       {active.length === 0 ? (
         <p className="empty-state">No active tasks. Add one above to get rolling.</p>
       ) : (
         <ul className="task-list">
           {active.map((task) => (
-            <TaskItem key={task.id} task={task} onUpdate={onUpdate} onDelete={onDelete} />
+            <TaskItem key={task.id} task={task} tasks={tasks} onUpdate={onUpdate} onDelete={onDelete} />
           ))}
         </ul>
       )}
@@ -35,7 +35,7 @@ export default function TaskList({ tasks, onCreate, onUpdate, onDelete }) {
           {showCompleted && (
             <ul className="task-list">
               {completed.map((task) => (
-                <TaskItem key={task.id} task={task} onUpdate={onUpdate} onDelete={onDelete} />
+                <TaskItem key={task.id} task={task} tasks={tasks} onUpdate={onUpdate} onDelete={onDelete} />
               ))}
             </ul>
           )}

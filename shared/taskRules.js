@@ -51,6 +51,34 @@ function sanitizeDueDate(raw) {
   return date ? formatDueDate(date) : null;
 }
 
+function sanitizeBlockedBy(raw, ownId) {
+  const ids = raw.map((id) => String(id).trim()).filter((id) => id && id !== ownId);
+  return Array.from(new Set(ids));
+}
+
+// False while the task's start date is in the future or any task it's blocked by is still open.
+// A blocker that no longer exists counts as done.
+export function isReady(task, tasksById, today = formatDueDate(new Date())) {
+  if (task.startDate && task.startDate > today) return false;
+  return (task.blockedBy ?? []).every((id) => {
+    const blocker = tasksById.get(id);
+    return !blocker || blocker.completed;
+  });
+}
+
+// Drops a just-completed task from everything it was blocking, so a repeating blocker
+// doesn't block them again when it comes back. Returns whether anything changed.
+export function releaseBlockedBy(tasks, completedId) {
+  let changed = false;
+  for (const task of tasks) {
+    if (task.blockedBy?.includes(completedId)) {
+      task.blockedBy = task.blockedBy.filter((id) => id !== completedId);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 // `day` lets callers aim for a day-of-month the source date was clamped away from
 // (e.g. back to the 31st after a stop on Feb 28).
 function addMonthsClamped(date, months, day = date.getDate()) {
@@ -104,6 +132,11 @@ export function sanitizeTaskInput(body, existing = {}) {
     const n = Number(body.estimatedMinutes);
     estimatedMinutes = Number.isFinite(n) && n > 0 ? n : null;
   }
+
+  const blockedBy = Array.isArray(body.blockedBy)
+    ? sanitizeBlockedBy(body.blockedBy, existing.id)
+    : existing.blockedBy ?? [];
+  const startDate = body.startDate !== undefined ? sanitizeDueDate(body.startDate) : existing.startDate ?? null;
 
   const recurrence =
     body.recurrence !== undefined ? sanitizeRecurrence(body.recurrence) : existing.recurrence ?? null;
@@ -161,5 +194,7 @@ export function sanitizeTaskInput(body, existing = {}) {
     dueDate,
     previousDueDate,
     dueAnchorDay,
+    blockedBy,
+    startDate,
   };
 }

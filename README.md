@@ -44,7 +44,7 @@ node server/cli.js list
 
 | Command | What it does |
 | --- | --- |
-| `list [--all] [--tag T] [--priority P] [--due-within N]` | Active tasks (`--all` includes completed) |
+| `list [--all] [--ready] [--tag T] [--priority P] [--due-within N]` | Active tasks (`--all` includes completed, `--ready` leaves out blocked or not-started ones) |
 | `find <text> [--all]` | Tasks whose title or notes contain the text |
 | `add --title T [task options]` | Add a task |
 | `update <id> [task options]` | Change only the given fields |
@@ -54,8 +54,18 @@ node server/cli.js list
 
 Task options: `--title T`, `--priority high|medium|low`, `--tags a,b`,
 `--due YYYY-MM-DD|none`, `--minutes N|none`, `--notes TEXT`,
-`--repeat daily|weekly|monthly[:interval]|none`. An `<id>` can be the full id
-or a unique prefix of it. `node server/cli.js --help` prints the same summary.
+`--repeat daily|weekly|monthly[:interval]|none`, `--start YYYY-MM-DD|none`,
+`--blocked-by id1,id2|none`. An `<id>` can be the full id or a unique prefix of
+it. `node server/cli.js --help` prints the same summary.
+
+### Blocked and not-yet-started tasks
+
+A task can wait on other tasks (`blockedBy`) or on a day (`startDate`). Until
+every task it waits on is done and its start date has come, it isn't *ready*:
+the randomizer and `roll` skip it, and the list shows why ("Waiting on …",
+"Starts …"). Completing a task removes it from everything it was blocking, so a
+repeating blocker doesn't block them again when it comes back. A deleted
+blocker counts as done.
 
 ## Claude Desktop (MCP server)
 
